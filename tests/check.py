@@ -70,6 +70,8 @@ with sync_playwright() as p:
             if broken:
                 page.locator(".opts button").filter(has_text=ok_code).first.click()
     solve_card()
+    page.wait_for_timeout(900)
+    check("win: card turns to its back to show the finished tree", page.get_attribute("body", "data-side") == "back" and page.locator("#tree li.broken").count() == 0)
     check("levels: card 1 clears", page.get_attribute("body", "data-level") == "cleared" and page.get_attribute("body", "data-card") == "1")
     page.click("#next")
     check("map: tile travels", page.get_attribute("body", "data-travel") == "traveling")
@@ -82,6 +84,7 @@ with sync_playwright() as p:
     check("levels: card 3 loads", page.get_attribute("body", "data-card") == "3")
     solve_card()
     check("levels: card 3 finishes the game", page.get_attribute("body", "data-level") == "finished")
+    check("complete: shows the three totals", page.locator(".totals li").count() == 3 and "Complete" in page.text_content("#partTitle"))
     page.click("#again")
     page.wait_for_function("document.body.dataset.card === '1' && document.body.dataset.travel === 'resting'", timeout=4000)
     check("levels: Play again starts at card 1", page.get_attribute("body", "data-card") == "1" and page.get_attribute("body", "data-level") == "playing")

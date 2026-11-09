@@ -4,6 +4,8 @@ import * as THREE from 'three';
 import { LEVELS } from './levels.js';
 import { speak, chime, thud, toggleVoice, onVoiceChange } from './sound.js';
 
+// Running totals across the three cards, shown on the Complete screen. There are no points or streaks.
+var totals = { heard: 0, tries: 0, hints: 0 };
 var cardNo = 0; // which card (level) is on the table: 0, 1 or 2
 function parts() { return LEVELS[cardNo].parts; }
 
@@ -199,23 +201,41 @@ function choose(p, o, k, btn) {
   }
 }
 
+function countHeard() {
+  var n = 0;
+  for (var id in round.heard) n++;
+  return n;
+}
+
+function plural(n, word) { return n + ' ' + word + (n === 1 ? '' : 's'); }
+
 function win() {
   var last = cardNo === LEVELS.length - 1;
   level.send(last ? 'FINISH' : 'CLEAR');
-  var html = '<h2 tabindex="-1" id="partTitle">' + (last ? 'All three cards pass' : 'This card passes') + '</h2>' +
-    '<p>All three problems fixed with ' + round.tries + ' wrong ' + (round.tries === 1 ? 'try' : 'tries') + '. On screen, nothing changed. To a screen reader user, the card now makes sense.</p>';
-  if (last) html += '<p><button class="primary" id="again">Play again with new problems</button></p>';
-  else html += '<p><button class="primary" id="next">Next card: ' + LEVELS[cardNo + 1].title + '</button></p>';
+  totals.heard += countHeard(); totals.tries += round.tries; totals.hints += round.hints;
+  var html;
+  if (last) {
+    html = '<h2 tabindex="-1" id="partTitle">Complete</h2>' +
+      '<p>All three cards pass. On screen, nothing changed. To a screen reader user, every card now makes sense.</p>' +
+      '<ul class="totals"><li>Parts you listened to: ' + totals.heard + '</li><li>Wrong tries: ' + totals.tries + '</li><li>Hints used: ' + totals.hints + '</li></ul>' +
+      '<p><button class="primary" id="again">Play again with new problems</button></p>';
+  } else {
+    html = '<h2 tabindex="-1" id="partTitle">This card passes</h2>' +
+      '<p>All three problems fixed with ' + plural(round.tries, 'wrong try').replace('wrong trys', 'wrong tries') + ' and ' + plural(round.hints, 'hint') + '. The back of the card shows the tree with no holes.</p>' +
+      '<p><button class="primary" id="next">Next card: ' + LEVELS[cardNo + 1].title + '</button></p>';
+  }
   html += '<p><a href="../START_HERE.html">Back to the start</a></p>';
   inspect.innerHTML = html;
   var go = document.getElementById(last ? 'again' : 'next');
   go.onclick = last ? restartGame : nextCard;
   go.focus();
-  status.textContent = last ? 'All three cards pass.' : 'Card ' + (cardNo + 1) + ' passes.';
+  status.textContent = last ? 'Complete. All three cards pass.' : 'Card ' + (cardNo + 1) + ' passes.';
   round.selected = null;
   renderList();
   highlight(null);
   celebrate();
+  // Turn the card over so the finished tree, with no hollow nodes, is what you see.
+  if (side.state === 'front') flip();
 }
 
 // Put a new card on the table. If the card is showing its back, turn it to the front.
@@ -236,6 +256,7 @@ function nextCard() {
 function restartGame() {
   if (!level.send('RESTART')) return;
   round.number++;
+  totals = { heard: 0, tries: 0, hints: 0 };
   travelTo(0, function () { loadCard(0); });
 }
 
