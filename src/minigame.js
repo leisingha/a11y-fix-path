@@ -4,8 +4,18 @@ import * as THREE from 'three';
 import { LEVELS } from './levels.js';
 import { speak, chime, thud, toggleVoice, onVoiceChange } from './sound.js';
 
-var level = 0;
-function parts() { return LEVELS[level].parts; }
+var cardNo = 0; // which card (level) is on the table: 0, 1 or 2
+function parts() { return LEVELS[cardNo].parts; }
+
+// The progress through the three cards:
+//
+//   playing --CLEAR--> cleared --NEXT--> playing     (cards 1 and 2: a Next card button appears)
+//   playing --FINISH--> finished --RESTART--> playing  (card 3: the end of the game)
+var level = createMachine('level', 'playing', {
+  'playing':  { CLEAR: 'cleared', FINISH: 'finished' },
+  'cleared':  { NEXT: 'playing' },
+  'finished': { RESTART: 'playing' }
+});
 
 // ---------- state ----------
 // The round as a state machine:
@@ -45,8 +55,10 @@ function pickBroken() {
   }
   var out = {};
   for (var k = 0; k < 3; k++) out[ids[k]] = true;
-  // Round 1 always includes the button, so the first play matches the explainer.
-  if (round.number === 1 && !out.button) { delete out[ids[2]]; out.button = true; }
+  // On the very first round the card must include its mustBreak part (the button on card 1),
+  // so the first play matches the explainer.
+  var must = LEVELS[cardNo].mustBreak;
+  if (round.number === 1 && must && !out[must]) { delete out[ids[2]]; out[must] = true; }
   return out;
 }
 
@@ -84,7 +96,8 @@ function renderList() {
     li.appendChild(b);
     listBox.appendChild(li);
   });
-  scoreBox.textContent = 'Round ' + round.number + ' · ' + brokenLeft() + ' of 3 problems left · wrong tries: ' + round.tries;
+  scoreBox.textContent = 'Card ' + (cardNo + 1) + ' of ' + LEVELS.length + ': ' + LEVELS[cardNo].title + ' · ' + brokenLeft() + ' of 3 problems left · wrong tries: ' + round.tries;
+  document.body.setAttribute('data-card', String(cardNo + 1));
   document.body.setAttribute('data-left', String(brokenLeft()));
 }
 
@@ -162,16 +175,47 @@ function choose(p, o, k, btn) {
 }
 
 function win() {
-  inspect.innerHTML = '<h2>The card passes</h2><p>All three problems fixed with ' + round.tries + ' wrong ' + (round.tries === 1 ? 'try' : 'tries') + '. On screen, nothing changed. To a screen reader user, the card now makes sense.</p>' +
-    '<p><button class="primary" id="again">Play again with new problems</button></p>' +
-    '<p><a href="../START_HERE.html">Back to the start</a></p>';
-  document.getElementById('again').onclick = function () { round.number++; newRound(); };
-  document.getElementById('again').focus();
-  status.textContent = 'Round complete. The card passes.';
+  var last = cardNo === LEVELS.length - 1;
+  level.send(last ? 'FINISH' : 'CLEAR');
+  var html = '<h2 tabindex="-1" id="partTitle">' + (last ? 'All three cards pass' : 'This card passes') + '</h2>' +
+    '<p>All three problems fixed with ' + round.tries + ' wrong ' + (round.tries === 1 ? 'try' : 'tries') + '. On screen, nothing changed. To a screen reader user, the card now makes sense.</p>';
+  if (last) html += '<p><button class="primary" id="again">Play again with new problems</button></p>';
+  else html += '<p><button class="primary" id="next">Next card: ' + LEVELS[cardNo + 1].title + '</button></p>';
+  html += '<p><a href="../START_HERE.html">Back to the start</a></p>';
+  inspect.innerHTML = html;
+  var go = document.getElementById(last ? 'again' : 'next');
+  go.onclick = last ? restartGame : nextCard;
+  go.focus();
+  status.textContent = last ? 'All three cards pass.' : 'Card ' + (cardNo + 1) + ' passes.';
   round.selected = null;
   renderList();
   highlight(null);
   celebrate();
+}
+
+// Put a new card on the table. If the card is showing its back, turn it to the front.
+function loadCard(n) {
+  cardNo = n;
+  clearEffects();
+  buildCard(cardNo);
+  if (side.state === 'back') flip();
+  newRound();
+}
+
+function nextCard() {
+  level.send('NEXT');
+  loadCard(cardNo + 1);
+}
+
+function restartGame() {
+  level.send('RESTART');
+  round.number++;
+  loadCard(0);
+}
+
+// Effects belong to the old card's meshes, so they are dropped when the card changes.
+function clearEffects() {
+  pulses = []; ripples = []; confetti = [];
 }
 
 function newRound() {
@@ -179,7 +223,7 @@ function newRound() {
   round.broken = pickBroken();
   round.fixed = {}; round.heard = {}; round.wrongTried = {}; round.tries = 0; round.selected = null;
   document.body.setAttribute('data-round', String(round.number));
-  inspect.innerHTML = '<h2 tabindex="-1" id="partTitle">Find the three problems</h2><p>The card looks finished. Three parts of it are broken for screen reader users. Choose a part to hear what a screen reader says, then pick the fix.</p>';
+  inspect.innerHTML = '<h2 tabindex="-1" id="partTitle">Find the three problems</h2><p>The card looks finished. Three of its five parts are broken for screen reader users. Choose a part to hear what a screen reader says, then pick the fix.</p>';
   renderList();
   refreshBadges();
   highlight(null);
@@ -273,6 +317,14 @@ function plane(w, h, texture, color) {
   return new THREE.Mesh(new THREE.PlaneGeometry(w, h), m);
 }
 
+// A white box with a border and one line of grey text, used by the sign-in fields.
+function field(g, w, h, text) {
+  g.fillStyle = '#ffffff'; g.fillRect(0, 0, w, h);
+  g.strokeStyle = '#55555c'; g.lineWidth = 3; g.strokeRect(1.5, 1.5, w - 3, h - 3);
+  g.fillStyle = '#76767d'; g.font = '400 20px system-ui, sans-serif'; g.textBaseline = 'middle';
+  g.fillText(text, 14, h / 2);
+}
+
 var DRAW = {
   img: function (g, w, h) {
     g.fillStyle = '#ffe2a8'; g.beginPath(); g.arc(w / 2, h / 2, w / 2 - 2, 0, Math.PI * 2); g.fill();
@@ -299,6 +351,48 @@ var DRAW = {
     g.strokeStyle = '#1f5fbf'; g.lineWidth = 4; g.beginPath(); g.arc(w / 2, h / 2, w / 2 - 4, 0, Math.PI * 2); g.stroke();
     g.fillStyle = '#1f5fbf'; g.font = '700 24px Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
     g.fillText('i', w / 2, h / 2 + 1);
+  },
+  // ---- card 2: sign-in form
+  signinTitle: function (g, w, h) {
+    g.fillStyle = '#1d1d1f'; g.font = '700 30px system-ui, sans-serif'; g.textBaseline = 'middle';
+    g.fillText('Sign in', 4, h / 2);
+  },
+  signinEmail: function (g, w, h) { field(g, w, h, 'Email', false); },
+  signinPassword: function (g, w, h) { field(g, w, h, '••••••••', false); },
+  signinError: function (g, w, h) {
+    g.fillStyle = '#b3261e'; g.font = '600 18px system-ui, sans-serif'; g.textBaseline = 'middle';
+    g.fillText('Wrong password', 4, h / 2);
+  },
+  signinButton: function (g, w, h) {
+    g.fillStyle = '#1f5fbf'; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#ffffff'; g.font = '700 22px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText('Sign in', w / 2, h / 2 + 1);
+  },
+  // ---- card 3: nav bar
+  navLogo: function (g, w, h) {
+    g.fillStyle = '#1d1d1f'; g.beginPath(); g.arc(w / 2, h / 2, w / 2 - 2, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#ffe2a8'; g.font = '700 30px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText('A', w / 2, h / 2 + 2);
+  },
+  navLang: function (g, w, h) {
+    g.strokeStyle = '#55555c'; g.lineWidth = 2; g.strokeRect(1, 1, w - 2, h - 2);
+    g.fillStyle = '#1d1d1f'; g.font = '600 18px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText('EN', w / 2, h / 2 + 1);
+  },
+  navSearch: function (g, w, h) {
+    g.strokeStyle = '#1d1d1f'; g.lineWidth = 4; g.beginPath(); g.arc(w / 2 - 4, h / 2 - 4, 12, 0, Math.PI * 2); g.stroke();
+    g.beginPath(); g.moveTo(w / 2 + 5, h / 2 + 5); g.lineTo(w / 2 + 16, h / 2 + 16); g.stroke();
+  },
+  navCart: function (g, w, h) {
+    g.strokeStyle = '#1d1d1f'; g.lineWidth = 4; g.lineJoin = 'round'; g.beginPath();
+    g.moveTo(8, 12); g.lineTo(15, 12); g.lineTo(20, 34); g.lineTo(42, 34); g.lineTo(46, 18); g.lineTo(17, 18); g.stroke();
+    g.fillStyle = '#b3261e'; g.beginPath(); g.arc(w - 10, 10, 10, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#ffffff'; g.font = '700 14px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText('2', w - 10, 11);
+  },
+  navMenu: function (g, w, h) {
+    g.fillStyle = '#1d1d1f';
+    for (var i = 0; i < 3; i++) g.fillRect(12, 14 + i * 12, w - 24, 5);
   }
 };
 
@@ -449,7 +543,7 @@ function initScene() {
   cardGroup = new THREE.Group();
   scene.add(cardGroup);
   BADGE_FIXED = badgeTex('fixed'); BADGE_FINE = badgeTex('fine');
-  buildCard(level);
+  buildCard(cardNo);
 
   renderer.domElement.addEventListener('click', onClick);
   renderer.domElement.addEventListener('pointerdown', function (e) { drag.x = e.clientX; drag.on = true; drag.used = false; });
@@ -587,5 +681,7 @@ function loop() {
 initScene();
 refreshTree();
 window.A11yFixPath = window.A11yFixPath || {};
-window.A11yFixPath.cardGroup = cardGroup; // lets tests and the console turn the card
+window.A11yFixPath.cardGroup = cardGroup;
+window.A11yFixPath.levels = LEVELS; // tests read the right answers from here
+window.A11yFixPath.round = round; // lets tests and the console turn the card
 newRound();

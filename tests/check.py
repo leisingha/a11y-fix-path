@@ -61,10 +61,33 @@ with sync_playwright() as p:
     check("flip: drag turns the card", side() == "back", side())
     check("flip: drag did not select a part", page.locator("#parts [aria-pressed=true]").count() == 0)
 
+    # Play all three cards to the end using the answers in the level data
+    def solve_card():
+        parts = page.evaluate("window.A11yFixPath.levels[%d].parts.map(p => [p.id, p.options.find(o => o.ok).code, !!window.A11yFixPath.round.broken[p.id]])" % (int(page.get_attribute("body", "data-card")) - 1))
+        for pid, ok_code, broken in parts:
+            if page.get_attribute("body", "data-game") == "won": break
+            page.click("#parts button[data-part=%s]" % pid)
+            if broken:
+                page.locator(".opts button").filter(has_text=ok_code).first.click()
+    solve_card()
+    check("levels: card 1 clears", page.get_attribute("body", "data-level") == "cleared" and page.get_attribute("body", "data-card") == "1")
+    page.click("#next")
+    page.wait_for_timeout(300)
+    check("levels: Next card loads card 2", page.get_attribute("body", "data-card") == "2" and page.get_attribute("body", "data-level") == "playing" and page.get_attribute("body", "data-game") == "intro")
+    solve_card()
+    page.click("#next")
+    page.wait_for_timeout(300)
+    check("levels: card 3 loads", page.get_attribute("body", "data-card") == "3")
+    solve_card()
+    check("levels: card 3 finishes the game", page.get_attribute("body", "data-level") == "finished")
+    page.click("#again")
+    page.wait_for_timeout(300)
+    check("levels: Play again starts at card 1", page.get_attribute("body", "data-card") == "1" and page.get_attribute("body", "data-level") == "playing")
+
     # Voice: selecting a part queues its words; M mutes the sound
     page.click("#parts button >> nth=0")
     spoken = page.evaluate("window.A11yFixPath.spoken")
-    check("voice: selecting a part speaks its words", len(spoken) == 1 and "Envelope image" in spoken[0], spoken)
+    check("voice: selecting a part speaks its words", "Envelope image" in spoken[-1], spoken[-1:])
     page.keyboard.press("m")
     check("voice: M mutes", page.get_attribute("body", "data-voice") == "muted" and page.get_attribute("#mute", "aria-pressed") == "true")
     page.keyboard.press("m")
