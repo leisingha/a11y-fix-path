@@ -77,6 +77,7 @@ function partById(id) {
 // ---------- DOM ----------
 function renderList() {
   refreshTree();
+  renderMap();
   listBox.innerHTML = '';
   parts().forEach(function (p, i) {
     var li = document.createElement('li');
@@ -203,15 +204,67 @@ function loadCard(n) {
 }
 
 function nextCard() {
-  level.send('NEXT');
-  loadCard(cardNo + 1);
+  if (!level.send('NEXT')) return; // already on the way
+  var n = cardNo + 1;
+  travelTo(n, function () { loadCard(n); });
 }
 
 function restartGame() {
-  level.send('RESTART');
+  if (!level.send('RESTART')) return;
   round.number++;
-  loadCard(0);
+  travelTo(0, function () { loadCard(0); });
 }
+
+// ---------- the map: three stops, one tile ----------
+// The tile hops along the track to the next card, and the card loads when it lands.
+//
+//   resting --GO--> traveling --ARRIVE--> resting
+//
+// With reduced motion the tile jumps, so ARRIVE happens straight away.
+var travel = createMachine('travel', 'resting', {
+  'resting':   { GO: 'traveling' },
+  'traveling': { ARRIVE: 'resting' }
+});
+var mapList = document.getElementById('map');
+var tile = document.getElementById('tile');
+var onArrive = null;
+
+function renderMap() {
+  mapList.innerHTML = '';
+  LEVELS.forEach(function (lv, i) {
+    var li = document.createElement('li');
+    var done = i < cardNo || level.state === 'finished' || (i === cardNo && level.state === 'cleared');
+    li.className = i === cardNo ? 'here' : (done ? 'done' : 'ahead');
+    if (i === cardNo) li.setAttribute('aria-current', 'step');
+    li.innerHTML = '<span class="dot" aria-hidden="true">' + (done ? '✓' : (i + 1)) + '</span>' +
+      '<span class="name">Card ' + (i + 1) + ': ' + lv.title + '</span>' +
+      '<span class="teach">' + lv.teaches + (done ? ' · passed' : '') + '</span>';
+    mapList.appendChild(li);
+  });
+}
+
+// Tile position: the middle of stop n, as a share of the track width.
+function placeTile(n) {
+  tile.style.left = ((n * 2 + 1) / (LEVELS.length * 2) * 100) + '%';
+}
+
+function travelTo(n, then) {
+  if (!travel.send('GO')) return;
+  onArrive = then;
+  status.textContent = 'Moving to card ' + (n + 1) + ': ' + LEVELS[n].title + '.';
+  placeTile(n);
+  if (reduceMotion) arrive();
+}
+
+function arrive() {
+  if (!travel.send('ARRIVE')) return;
+  var fn = onArrive; onArrive = null;
+  if (fn) fn();
+}
+
+tile.addEventListener('transitionend', function (e) { if (e.propertyName === 'left') arrive(); });
+tile.addEventListener('transitioncancel', arrive);
+placeTile(0);
 
 // Effects belong to the old card's meshes, so they are dropped when the card changes.
 function clearEffects() {

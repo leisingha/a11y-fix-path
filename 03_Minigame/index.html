@@ -14,6 +14,20 @@
   #stage { height: 520px; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--bg); cursor: pointer; }
   #stage canvas { display: block; }
   #treeBox { margin-top: 12px; }
+  .mapwrap { position: relative; margin: 8px 0 14px; padding-top: 34px; }
+  .mapwrap::before { content: ""; position: absolute; top: 15px; left: 16.6%; right: 16.6%; height: 4px; background: var(--line); border-radius: 2px; }
+  #map { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); text-align: center; }
+  #map li { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 14px; color: var(--muted); }
+  #map .dot { position: absolute; top: 4px; width: 26px; height: 26px; border-radius: 50%; background: #fff; border: 3px solid var(--line); font: 700 13px/20px system-ui, sans-serif; color: var(--muted); transform: translateX(-50%); }
+  #map li { position: relative; }
+  #map li .dot { top: -30px; left: 50%; }
+  #map .done .dot { background: #1e6b3a; border-color: #1e6b3a; color: #fff; }
+  #map .here .name { color: #1d1d1f; font-weight: 700; }
+  #map .teach { font-size: 13px; }
+  #tile { position: absolute; top: 2px; width: 30px; height: 30px; margin-left: -15px; border-radius: 7px; background: var(--accent); box-shadow: 0 3px 0 #123f80; z-index: 2; transition: left .9s cubic-bezier(.6,0,.4,1); }
+  body[data-travel="traveling"] #tile { animation: hop .45s ease-in-out 2; }
+  @keyframes hop { 50% { transform: translateY(-14px) rotate(90deg); } }
+  @media (prefers-reduced-motion: reduce) { #tile { transition: none; } body[data-travel="traveling"] #tile { animation: none; } }
   .stagebar { display: flex; gap: 12px; align-items: center; margin: 10px 0 0; }
   .stagebar .hint { font-size: 14px; color: var(--muted); }
   #stage { touch-action: pan-y; }
@@ -41,6 +55,10 @@
 <main id="main">
   <h1>3 · Practice: Sounds Wrong</h1>
   <p class="lede">The card looks finished. Three of its five parts are broken for screen reader users, and you can't tell which by looking. Inspect each part, hear what a screen reader says, and choose the fix. There is no timer. Each round breaks a different set.</p>
+  <nav class="mapwrap" aria-label="Your progress through the three cards">
+    <ol id="map"></ol>
+    <div id="tile" aria-hidden="true"></div>
+  </nav>
   <p id="score" aria-live="polite"></p>
   <div class="layout">
     <section class="panel" aria-labelledby="partsh">
