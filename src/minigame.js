@@ -63,6 +63,7 @@ function partById(id) {
 
 // ---------- DOM ----------
 function renderList() {
+  refreshTree();
   listBox.innerHTML = '';
   parts().forEach(function (p, i) {
     var li = document.createElement('li');
@@ -270,6 +271,101 @@ function buildCard(levelIndex) {
   for (var i = 0; i < 4; i++) ring.add(plane(1, 1, null, 0x1f5fbf));
   ring.visible = false;
   cardGroup.add(ring);
+
+  buildTree(levelIndex);
+}
+
+// ---------- the back of the card: its accessibility tree ----------
+// One sphere per part. Solid green = the part has a good role and name.
+// Hollow red wireframe = broken, so the tree has a hole where a name should be.
+var treeNodes = {}, treeLabels = {};
+var BACK_BG = '#22263a';
+var SPHERE = new THREE.SphereGeometry(13, 24, 16);
+var NODE_OK = new THREE.MeshLambertMaterial({ color: 0x3fae68 });
+var SPHERE_HOLLOW = new THREE.SphereGeometry(14, 8, 6); // fewer lines, so the wireframe reads as hollow
+var NODE_BROKEN = new THREE.MeshBasicMaterial({ color: 0xff5a4f, wireframe: true });
+
+function labelTex(text, color) {
+  return tex(function (g, w, h) {
+    g.fillStyle = BACK_BG; g.fillRect(0, 0, w, h);
+    g.fillStyle = color; g.font = '600 13px ui-monospace, Menlo, monospace'; g.textBaseline = 'middle';
+    g.fillText(text, 2, h / 2);
+  }, 262, 30);
+}
+
+function buildTree(levelIndex) {
+  treeNodes = {}; treeLabels = {};
+  var lv = LEVELS[levelIndex];
+  // The back group is turned half a circle, so it faces away until the card flips.
+  var back = new THREE.Group();
+  back.rotation.y = Math.PI;
+  back.position.z = -3;
+  cardGroup.add(back);
+  back.add(plane(392, 452, null, 0x22263a));
+
+  var title = plane(262, 30, labelTex('Accessibility tree', '#c9cbe0'));
+  title.position.set(-35, 195, 1); back.add(title);
+
+  // Root node and the line that joins it to every part.
+  var root = new THREE.Mesh(SPHERE, NODE_OK);
+  root.position.set(-150, 150, 14); back.add(root);
+  var rootLabel = plane(262, 30, labelTex(lv.treeRoot, '#ffffff'));
+  rootLabel.position.set(1, 150, 1); back.add(rootLabel);
+
+  var lineMat = new THREE.LineBasicMaterial({ color: 0x8a8fb0 });
+  var pts = [new THREE.Vector3(-150, 150, 2), new THREE.Vector3(-150, 150 - 70 * lv.parts.length, 2)];
+  lv.parts.forEach(function (p, i) {
+    var y = 80 - 70 * i;
+    pts[1].y = y;
+    var arm = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-150, y, 2), new THREE.Vector3(-110, y, 2)]);
+    back.add(new THREE.Line(arm, lineMat));
+    var node = new THREE.Mesh(SPHERE, NODE_OK);
+    node.position.set(-100, y, 14);
+    back.add(node);
+    treeNodes[p.id] = node;
+    var label = plane(262, 30, null, 0x22263a);
+    label.position.set(51, y, 1);
+    back.add(label);
+    treeLabels[p.id] = label;
+  });
+  back.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), lineMat));
+
+  var light = new THREE.DirectionalLight(0xffffff, 2.2);
+  light.position.set(-200, 300, -600); // shines on the back side
+  cardGroup.add(light);
+  cardGroup.add(new THREE.AmbientLight(0xffffff, 0.8));
+}
+
+// The words of one tree row. Used by the 3D label and the HTML list, so both always match.
+function treeRow(p) {
+  var broken = round.broken[p.id] && !round.fixed[p.id];
+  return { broken: broken, text: p.role + '  ' + (broken ? p.nameBefore : p.nameAfter) };
+}
+
+function refreshTree() {
+  var list = document.getElementById('tree');
+  if (list) {
+    list.innerHTML = '';
+    parts().forEach(function (p) {
+      var row = treeRow(p);
+      var li = document.createElement('li');
+      li.textContent = row.text + (row.broken ? ' (broken)' : '');
+      li.className = row.broken ? 'broken' : 'ok';
+      list.appendChild(li);
+    });
+  }
+  if (!renderer) return;
+  parts().forEach(function (p) {
+    var row = treeRow(p);
+    treeNodes[p.id].material = row.broken ? NODE_BROKEN : NODE_OK;
+    treeNodes[p.id].geometry = row.broken ? SPHERE_HOLLOW : SPHERE;
+    var old = treeLabels[p.id].material.map;
+    treeLabels[p.id].material.map = labelTex(row.text, row.broken ? '#ff8a80' : '#ffffff');
+    treeLabels[p.id].material.transparent = true;
+    treeLabels[p.id].material.color.set(0xffffff);
+    treeLabels[p.id].material.needsUpdate = true;
+    if (old) old.dispose();
+  });
 }
 
 function initScene() {
@@ -406,4 +502,7 @@ function loop() {
 }
 
 initScene();
+refreshTree();
+window.A11yFixPath = window.A11yFixPath || {};
+window.A11yFixPath.cardGroup = cardGroup; // lets tests and the console turn the card
 newRound();

@@ -13,6 +13,9 @@
   #parts button[aria-pressed="true"] { background: var(--ink); color: #fff; }
   #stage { height: 520px; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--bg); cursor: pointer; }
   #stage canvas { display: block; }
+  #treeBox { margin-top: 12px; }
+  #tree { font-family: ui-monospace, Menlo, monospace; font-size: .9rem; padding-left: 1.2em; }
+  #tree .broken { color: #b3261e; }
   .opts { display: grid; gap: 8px; }
   .opts button { text-align: left; }
   #score { font-weight: 700; margin: 0 0 10px; }
@@ -41,6 +44,10 @@
       <h2 id="partsh" style="margin-top:0">Parts of the card</h2>
       <ul id="parts"></ul>
       <p style="font-size:14px;color:var(--muted)">Tab to a part and press Enter, or click it in the picture. Up and down arrows move through the list.</p>
+      <div id="treeBox" hidden>
+        <h3>Accessibility tree</h3>
+        <ul id="tree"></ul>
+      </div>
     </section>
     <div id="stage"></div>
     <section class="panel" id="inspect"></section>
