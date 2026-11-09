@@ -86,6 +86,16 @@ with sync_playwright() as p:
     page.wait_for_function("document.body.dataset.card === '1' && document.body.dataset.travel === 'resting'", timeout=4000)
     check("levels: Play again starts at card 1", page.get_attribute("body", "data-card") == "1" and page.get_attribute("body", "data-level") == "playing")
 
+    # Hint: a broken part with a rule gets the checker's words, then its own nudge
+    page.evaluate("window.A11yFixPath.round.broken.button = true")  # force the button broken for this check
+    page.click("#parts button[data-part=button]")
+    page.click("#hintBtn")
+    hint = page.text_content("#hintText")
+    check("hint: button hint mentions the checker and the nudge", "checker from step 1" in hint and "role and a name" in hint, hint)
+    check("hint: counted once", page.evaluate("window.A11yFixPath.round.hints") == 1)
+    page.click("#hintBtn")
+    check("hint: second press not counted again", page.evaluate("window.A11yFixPath.round.hints") == 1)
+
     # Voice: selecting a part queues its words; M mutes the sound
     page.click("#parts button >> nth=0")
     spoken = page.evaluate("window.A11yFixPath.spoken")

@@ -37,7 +37,7 @@ var game = createMachine('game', 'intro', {
 // Each part also has its own small lifecycle for the round:
 //   fine:   unheard -> heard
 //   broken: unheard -> heard -> fixed
-var round = { broken: {}, fixed: {}, heard: {}, wrongTried: {}, tries: 0, number: 1, selected: null };
+var round = { broken: {}, fixed: {}, heard: {}, wrongTried: {}, tries: 0, number: 1, selected: null, hinted: {}, hints: 0 };
 
 var listBox = document.getElementById('parts');
 var inspect = document.getElementById('inspect');
@@ -118,11 +118,28 @@ function select(id) {
   if (isBroken) thud(); else chime();
 }
 
+// A hint runs the same rule the fixer in step 1 uses on this part's broken code.
+// If the rule fires, the hint says so. If not, the checker can't see this problem, which is the point:
+// some problems need a person. Then the part's own nudge follows.
+function hintFor(p) {
+  var text = '';
+  var rule = null;
+  if (p.rule && window.RULES) {
+    for (var i = 0; i < RULES.length; i++) if (RULES[i].id === p.rule) rule = RULES[i];
+  }
+  if (rule && rule.find(p.badCode).length > 0) {
+    text = 'The checker from step 1 flags this: ' + rule.title + ' (' + rule.wcag + '). ';
+  } else {
+    text = 'The step 1 checker cannot see this one. ';
+  }
+  return text + p.hint;
+}
+
 function showPart(p, isBroken, note) {
   var html = '<h2 tabindex="-1" id="partTitle">' + p.label + '</h2>';
   html += '<p><strong>A screen reader says:</strong> <span class="' + (isBroken ? 'bad' : 'good') + '">' + (isBroken ? p.badSays : p.okSays) + '</span></p>';
   if (isBroken) {
-    html += '<p><strong>Code:</strong> <code>' + esc(p.badCode) + '</code></p><p>Which change fixes it?</p><div class="opts" role="group" aria-label="Fix options"></div><p id="feedback" role="status"></p>';
+    html += '<p><strong>Code:</strong> <code>' + esc(p.badCode) + '</code></p><p>Which change fixes it?</p><div class="opts" role="group" aria-label="Fix options"></div><p id="feedback" role="status"></p><p><button type="button" id="hintBtn">Hint</button></p><p id="hintText" role="status"></p>';
   } else if (round.fixed[p.id]) {
     html += '<p class="good">Fixed.</p>';
   } else {
@@ -131,6 +148,13 @@ function showPart(p, isBroken, note) {
   if (note) html += '<p>' + note + '</p>';
   inspect.innerHTML = html;
   if (!isBroken) return;
+  var hintBtn = document.getElementById('hintBtn');
+  var hintText = document.getElementById('hintText');
+  if (round.hinted[p.id]) hintText.textContent = hintFor(p);
+  hintBtn.onclick = function () {
+    if (!round.hinted[p.id]) { round.hinted[p.id] = true; round.hints++; }
+    hintText.textContent = hintFor(p);
+  };
   var opts = inspect.querySelector('.opts');
   var tried = round.wrongTried[p.id] || {};
   p.options.forEach(function (o, k) {
@@ -274,7 +298,7 @@ function clearEffects() {
 function newRound() {
   game.send('NEW_ROUND');
   round.broken = pickBroken();
-  round.fixed = {}; round.heard = {}; round.wrongTried = {}; round.tries = 0; round.selected = null;
+  round.fixed = {}; round.heard = {}; round.wrongTried = {}; round.tries = 0; round.selected = null; round.hinted = {}; round.hints = 0;
   document.body.setAttribute('data-round', String(round.number));
   inspect.innerHTML = '<h2 tabindex="-1" id="partTitle">Find the three problems</h2><p>The card looks finished. Three of its five parts are broken for screen reader users. Choose a part to hear what a screen reader says, then pick the fix.</p>';
   renderList();
