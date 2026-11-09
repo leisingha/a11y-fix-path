@@ -182,8 +182,11 @@ function newRound() {
 
 function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
-// ---------- Three.js: flat 2D card with an orthographic camera ----------
-var renderer, scene, camera, meshes = {}, badges = {}, ring, pulses = [];
+// ---------- Three.js: the card is a group of flat planes, seen through a perspective camera ----------
+// Everything that belongs to the card (parts, badges, ring, ripples, confetti) goes in cardGroup,
+// so the whole card can later be turned over as one object.
+var renderer, scene, camera, cardGroup, meshes = {}, badges = {}, ring, pulses = [];
+var FOV = 20, HALF = 260; // HALF: half the height of the area the camera must fit, in card units
 
 function tex(draw, w, h) {
   var c = document.createElement('canvas');
@@ -240,6 +243,35 @@ function badgeTex(kind) {
 }
 var BADGE_FIXED, BADGE_FINE;
 
+// Empty the card group and draw the parts of one level into it.
+function buildCard(levelIndex) {
+  while (cardGroup.children.length) cardGroup.remove(cardGroup.children[0]);
+  meshes = {}; badges = {};
+
+  var shadow = plane(392, 452, null, 0xd9d5cc); shadow.position.set(6, -6, -2); cardGroup.add(shadow);
+  var card = plane(392, 452, null, 0xffffff); card.position.set(0, 0, -1); cardGroup.add(card);
+
+  LEVELS[levelIndex].parts.forEach(function (p) {
+    var draw = DRAW[p.draw] || function (g, w, h) { g.fillStyle = '#d0d0d4'; g.fillRect(0, 0, w, h); };
+    var m = plane(p.w, p.h, tex(draw, p.w, p.h));
+    m.position.set(p.x || 0, p.y, 0);
+    m.userData.id = p.id;
+    cardGroup.add(m);
+    meshes[p.id] = m;
+    var b = plane(28, 28, BADGE_FIXED);
+    b.position.set((p.x || 0) + p.w / 2 + 2, p.y + p.h / 2 + 2, 1);
+    b.visible = false;
+    cardGroup.add(b);
+    badges[p.id] = b;
+  });
+
+  // Selection ring: four thin bars around the selected part.
+  ring = new THREE.Group();
+  for (var i = 0; i < 4; i++) ring.add(plane(1, 1, null, 0x1f5fbf));
+  ring.visible = false;
+  cardGroup.add(ring);
+}
+
 function initScene() {
   try { renderer = new THREE.WebGLRenderer({ antialias: true }); }
   catch (e) { stage.innerHTML = '<p style="padding:20px">The picture of the card needs WebGL. The list of parts on the left plays the whole game without it.</p>'; return; }
@@ -248,31 +280,11 @@ function initScene() {
   stage.appendChild(renderer.domElement);
   renderer.domElement.setAttribute('aria-hidden', 'true');
   scene = new THREE.Scene();
-  camera = new THREE.OrthographicCamera(-250, 250, 260, -260, -10, 10);
-
-  var shadow = plane(392, 452, null, 0xd9d5cc); shadow.position.set(6, -6, -2); scene.add(shadow);
-  var card = plane(392, 452, null, 0xffffff); card.position.set(0, 0, -1); scene.add(card);
-
+  camera = new THREE.PerspectiveCamera(FOV, 1, 10, 5000);
+  cardGroup = new THREE.Group();
+  scene.add(cardGroup);
   BADGE_FIXED = badgeTex('fixed'); BADGE_FINE = badgeTex('fine');
-
-  parts().forEach(function (p) {
-    var m = plane(p.w, p.h, tex(DRAW[p.draw], p.w, p.h));
-    m.position.set(p.x || 0, p.y, 0);
-    m.userData.id = p.id;
-    scene.add(m);
-    meshes[p.id] = m;
-    var b = plane(28, 28, BADGE_FIXED);
-    b.position.set((p.x || 0) + p.w / 2 + 2, p.y + p.h / 2 + 2, 1);
-    b.visible = false;
-    scene.add(b);
-    badges[p.id] = b;
-  });
-
-  // Selection ring: four thin bars around the selected part.
-  ring = new THREE.Group();
-  for (var i = 0; i < 4; i++) ring.add(plane(1, 1, null, 0x1f5fbf));
-  ring.visible = false;
-  scene.add(ring);
+  buildCard(level);
 
   renderer.domElement.addEventListener('click', onClick);
   window.addEventListener('resize', resize);
@@ -284,9 +296,13 @@ function resize() {
   if (!renderer) return;
   var w = stage.clientWidth, h = stage.clientHeight;
   renderer.setSize(w, h);
-  var aspect = w / h, half = 260;
-  camera.left = -half * aspect; camera.right = half * aspect; camera.top = half; camera.bottom = -half;
-  if (aspect < 1) { camera.left = -half; camera.right = half; camera.top = half / aspect; camera.bottom = -half / aspect; }
+  var aspect = w / h;
+  camera.aspect = aspect;
+  // Move the camera back until HALF fits: tan(fov/2) = HALF / distance.
+  var dist = HALF / Math.tan((FOV / 2) * Math.PI / 180);
+  if (aspect < 1) dist = dist / aspect; // narrow screen: fit the width instead
+  camera.position.set(0, 0, dist);
+  camera.lookAt(0, 0, 0);
   camera.updateProjectionMatrix();
 }
 
@@ -340,7 +356,7 @@ function ripple(id, isBroken) {
   for (var i = 0; i < count; i++) {
     var ring = new THREE.Mesh(new THREE.RingGeometry(0.92, 1, 64), new THREE.MeshBasicMaterial({ color: isBroken ? 0xb3261e : 0x1e6b3a, transparent: true, opacity: 0.8 }));
     ring.position.set(p.x || 0, p.y, 3);
-    scene.add(ring);
+    cardGroup.add(ring);
     ripples.push({ mesh: ring, t: -i * 0.25, base: Math.max(p.w, p.h) / 2 + 8 });
   }
 }
@@ -353,7 +369,7 @@ function celebrate() {
   for (var i = 0; i < 70; i++) {
     var m = plane(10, 10, null, colors[i % colors.length]);
     m.position.set((Math.random() - 0.5) * 80, (Math.random() - 0.5) * 80, 4);
-    scene.add(m);
+    cardGroup.add(m);
     var angle = Math.random() * Math.PI * 2;
     var speed = 4 + Math.random() * 7;
     confetti.push({ mesh: m, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed + 4, spin: (Math.random() - 0.5) * 0.3, life: 1 });
@@ -370,13 +386,13 @@ function loop() {
     var sc = rp.base * (reduceMotion ? 1.3 : 1 + rp.t * 1.6);
     rp.mesh.scale.set(sc, sc, 1);
     rp.mesh.material.opacity = 0.8 * (1 - rp.t);
-    if (rp.t >= 1) { scene.remove(rp.mesh); rp.mesh.geometry.dispose(); ripples.splice(r, 1); }
+    if (rp.t >= 1) { cardGroup.remove(rp.mesh); rp.mesh.geometry.dispose(); ripples.splice(r, 1); }
   }
   for (var c = confetti.length - 1; c >= 0; c--) {
     var cf = confetti[c];
     cf.mesh.position.x += cf.vx; cf.mesh.position.y += cf.vy;
     cf.vy -= 0.25; cf.mesh.rotation.z += cf.spin; cf.life -= 0.008;
-    if (cf.life <= 0 || cf.mesh.position.y < -400) { scene.remove(cf.mesh); confetti.splice(c, 1); }
+    if (cf.life <= 0 || cf.mesh.position.y < -400) { cardGroup.remove(cf.mesh); confetti.splice(c, 1); }
   }
   for (var i = pulses.length - 1; i >= 0; i--) {
     var pu = pulses[i];
