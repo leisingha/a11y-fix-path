@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A11y Fix Path — Lei Singha — DG8117 Create</title>
+<link rel="stylesheet" href="shared/style.css">
+<style>
+  .path { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 18px 0; }
+  @media (max-width: 860px) { .path { grid-template-columns: 1fr; } }
+  .path a { display: block; text-decoration: none; color: var(--ink); background: #fff; border: 2px solid var(--ink); border-radius: 12px; padding: 16px; }
+  .path a:hover { background: #fffdf6; }
+  .path .num { font-size: 32px; font-weight: 800; color: var(--accent); }
+  .path h2 { margin: 2px 0 6px; }
+  .path p { margin: 0; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; background: #fff; }
+  th, td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: #efece4; }
+  .meta { color: var(--muted); font-size: 15px; }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <span class="brand">A11y Fix Path</span>
+  <nav aria-label="Path">
+    <ol class="steps">
+      <li><a href="01_Fixer/index.html">1 · Find it</a></li>
+      <li><a href="02_Explainer/index.html">2 · See why</a></li>
+      <li><a href="03_Minigame/index.html">3 · Practice</a></li>
+    </ol>
+  </nav>
+</header>
+<main id="main">
+  <p class="meta">Lei Singha · DG8117 Introduction to Game Design · Create · Make the Thing · Fall 2026</p>
+  <h1>Fix one button, three ways</h1>
+  <p class="lede">An icon-only button looks fine but a screen reader user hears only "button". This artifact walks one visitor through that bug in under two minutes. First a tool finds it and proposes the fix. Then a 3D explainer shows why the fix works. Last, a short game lets the visitor fix the same kind of problem themselves. Everything runs in a browser from this folder, with no install and no internet needed.</p>
+
+  <div class="path">
+    <a href="01_Fixer/index.html"><span class="num">1</span><h2>Find it</h2><p>Check a React component, accept the fix for the icon button and watch the re-check pass. (About 30 seconds.)</p></a>
+    <a href="02_Explainer/index.html"><span class="num">2</span><h2>See why</h2><p>Follow the same button from JSX to DOM to accessibility tree to screen reader, before and after the fix. (About 45 seconds.)</p></a>
+    <a href="03_Minigame/index.html"><span class="num">3</span><h2>Practice</h2><p>"Sounds Wrong": find the three broken parts of a card that looks finished. No timer, and new problems every round. (About 45 seconds.)</p></a>
+  </div>
+
+  <p><a class="btn primary" href="01_Fixer/index.html">Start the two-minute path →</a> &nbsp; <a class="btn" href="04_Capture/A11yFixPath_capture.mp4">Watch the capture video</a></p>
+
+  <h2>The four create outputs</h2>
+  <table>
+    <thead><tr><th scope="col">#</th><th scope="col">Output</th><th scope="col">Folder</th><th scope="col">Tool</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Fixer: five WCAG checks on JSX, a proposed fix for each, accept or reject, then re-check</td><td>01_Fixer</td><td>Plain HTML and JavaScript</td></tr>
+      <tr><td>2</td><td>Explainer: a 3D button travels through four stops (code, DOM tree, accessibility tree, speaker), before and after. It works with the keyboard and supports reduced motion.</td><td>02_Explainer</td><td>Three.js (perspective camera)</td></tr>
+      <tr><td>3</td><td>Minigame "Sounds Wrong": inspect, hear and fix, with random problems each round</td><td>03_Minigame</td><td>Three.js (orthographic 2D)</td></tr>
+      <tr><td>4</td><td>Capture video of the full path, plus this start page that joins the pieces into one beat</td><td>04_Capture, START_HERE.html</td><td>Playwright screen capture, ffmpeg</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Why these tools</h2>
+  <p id="tool-choice">I built everything as static web pages because the people I want to hire me are front-end teams, and they ship accessible interfaces in the browser. Three.js draws the explainer and the game, but every word and control also exists in the page itself, so the pieces work with a keyboard and a screen reader, which is the skill the work is meant to show.</p>
+  <p class="meta">How it works inside: each page runs on small named state machines. See STATE_MACHINES.md in this folder.</p>
+</main>
+</body>
+</html>
