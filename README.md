@@ -12,6 +12,8 @@ An icon-only button looks fine, but a screen reader user hears only "button". Th
 
 Clone the repo and double-click **START_HERE.html**. It opens in any current browser from the folder, with no install and no internet needed.
 
+Live version: https://leisingha.github.io/a11y-fix-path/
+
 If a page does not open on your machine, watch `04_Capture/A11yFixPath_capture.mp4`.
 
 ## Folder map
