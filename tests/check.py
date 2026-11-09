@@ -45,7 +45,32 @@ with sync_playwright() as p:
     page.wait_for_timeout(800)
     check("minigame: loads", page.get_attribute("body", "data-game") == "intro")
 
+    # Flip: button, F key, drag
+    side = lambda: page.get_attribute("body", "data-side")
+    page.click("#flip")
+    page.wait_for_timeout(900)
+    check("flip: button turns to the back", side() == "back" and page.is_visible("#tree"), side())
+    check("flip: tree has one row per part", page.locator("#tree li").count() == 5)
+    page.keyboard.press("f")
+    page.wait_for_timeout(900)
+    check("flip: F key turns to the front", side() == "front" and not page.is_visible("#tree"), side())
+    box = page.locator("#stage canvas").bounding_box()
+    page.mouse.move(box["x"] + 200, box["y"] + 200); page.mouse.down()
+    page.mouse.move(box["x"] + 300, box["y"] + 200, steps=5); page.mouse.up()
+    page.wait_for_timeout(900)
+    check("flip: drag turns the card", side() == "back", side())
+    check("flip: drag did not select a part", page.locator("#parts [aria-pressed=true]").count() == 0)
+
     check("no console errors", not errors, errors)
+    browser.close()
+
+    # Reduced motion: the flip lands at once
+    browser = p.chromium.launch(args=GL)
+    page = browser.new_page(reduced_motion="reduce")
+    page.goto(ROOT + "03_Minigame/index.html")
+    page.wait_for_timeout(500)
+    page.click("#flip")
+    check("reduced motion: flip is instant", page.get_attribute("body", "data-side") == "back")
     browser.close()
 
 print("\n%d failure(s)" % len(failures))

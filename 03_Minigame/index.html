@@ -14,6 +14,9 @@
   #stage { height: 520px; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--bg); cursor: pointer; }
   #stage canvas { display: block; }
   #treeBox { margin-top: 12px; }
+  .stagebar { display: flex; gap: 12px; align-items: center; margin: 10px 0 0; }
+  .stagebar .hint { font-size: 14px; color: var(--muted); }
+  #stage { touch-action: pan-y; }
   #tree { font-family: ui-monospace, Menlo, monospace; font-size: .9rem; padding-left: 1.2em; }
   #tree .broken { color: #b3261e; }
   .opts { display: grid; gap: 8px; }
@@ -49,7 +52,10 @@
         <ul id="tree"></ul>
       </div>
     </section>
-    <div id="stage"></div>
+    <div>
+      <div id="stage"></div>
+      <p class="stagebar"><button id="flip" type="button" class="btn">Turn the card over (F)</button> <span class="hint">or drag the card sideways</span></p>
+    </div>
     <section class="panel" id="inspect"></section>
   </div>
   <p id="status" class="sr-only" role="status"></p>

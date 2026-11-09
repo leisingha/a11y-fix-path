@@ -183,6 +183,60 @@ function newRound() {
 
 function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
+
+// ---------- turning the card over ----------
+// The card has two sides. Turning takes a moment (instant with reduced motion),
+// and FLIP is ignored while a turn is still happening.
+//
+//   front --FLIP--> turning-to-back --DONE--> back
+//   back  --FLIP--> turning-to-front --DONE--> front
+var side = createMachine('side', 'front', {
+  'front':            { FLIP: 'turning-to-back' },
+  'turning-to-back':  { DONE: 'back' },
+  'back':             { FLIP: 'turning-to-front' },
+  'turning-to-front': { DONE: 'front' }
+});
+var flipBtn = document.getElementById('flip');
+var treeBox = document.getElementById('treeBox');
+var turn = { t: 1, from: 0, to: 0 }; // t goes 0 to 1 during a turn
+
+function flip() {
+  if (!side.send('FLIP')) return;
+  turn.from = side.state === 'turning-to-back' ? 0 : Math.PI;
+  turn.to = side.state === 'turning-to-back' ? Math.PI : 0;
+  turn.t = 0;
+  if (reduceMotion || !renderer) finishTurn();
+}
+
+function finishTurn() {
+  turn.t = 1;
+  if (cardGroup) { cardGroup.rotation.y = turn.to; cardGroup.position.z = 0; }
+  side.send('DONE');
+}
+
+side.onChange(function (to) {
+  var onBack = to === 'back' || to === 'turning-to-back';
+  flipBtn.textContent = onBack ? 'Turn to the front (F)' : 'Turn the card over (F)';
+  treeBox.hidden = to !== 'back';
+  if (to === 'back') status.textContent = 'Back of the card: the accessibility tree. This is what a screen reader reads.';
+  if (to === 'front') status.textContent = 'Front of the card: what everyone sees.';
+});
+
+flipBtn.addEventListener('click', flip);
+document.addEventListener('keydown', function (e) {
+  if ((e.key === 'f' || e.key === 'F') && !e.ctrlKey && !e.metaKey && !e.altKey) flip();
+});
+
+// Called every frame from loop(). Smooth start and stop, and the card lifts a little mid-turn.
+function stepTurn(dt) {
+  if (turn.t >= 1 || !cardGroup) return;
+  turn.t = Math.min(1, turn.t + dt / 0.7);
+  var e = turn.t < 0.5 ? 2 * turn.t * turn.t : 1 - Math.pow(-2 * turn.t + 2, 2) / 2;
+  cardGroup.rotation.y = turn.from + (turn.to - turn.from) * e;
+  cardGroup.position.z = Math.sin(turn.t * Math.PI) * 80;
+  if (turn.t >= 1) finishTurn();
+}
+
 // ---------- Three.js: the card is a group of flat planes, seen through a perspective camera ----------
 // Everything that belongs to the card (parts, badges, ring, ripples, confetti) goes in cardGroup,
 // so the whole card can later be turned over as one object.
@@ -322,6 +376,7 @@ function buildTree(levelIndex) {
     var node = new THREE.Mesh(SPHERE, NODE_OK);
     node.position.set(-100, y, 14);
     back.add(node);
+    node.userData.id = p.id; // clicking a node selects that part, same as the front
     treeNodes[p.id] = node;
     var label = plane(262, 30, null, 0x22263a);
     label.position.set(51, y, 1);
@@ -383,6 +438,11 @@ function initScene() {
   buildCard(level);
 
   renderer.domElement.addEventListener('click', onClick);
+  renderer.domElement.addEventListener('pointerdown', function (e) { drag.x = e.clientX; drag.on = true; drag.used = false; });
+  window.addEventListener('pointermove', function (e) {
+    if (drag.on && !drag.used && Math.abs(e.clientX - drag.x) > 40) { drag.used = true; flip(); }
+  });
+  window.addEventListener('pointerup', function () { drag.on = false; });
   window.addEventListener('resize', resize);
   resize();
   requestAnimationFrame(loop);
@@ -402,12 +462,17 @@ function resize() {
   camera.updateProjectionMatrix();
 }
 
+var drag = { on: false, used: false, x: 0 }; // a sideways drag of more than 40px turns the card
+
 function onClick(e) {
+  if (drag.used) { drag.used = false; return; } // that was a drag, not a click
   var r = renderer.domElement.getBoundingClientRect();
   var v = new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
   var ray = new THREE.Raycaster();
   ray.setFromCamera(v, camera);
-  var hits = ray.intersectObjects(Object.keys(meshes).map(function (k) { return meshes[k]; }));
+  var targets = Object.keys(meshes).map(function (k) { return meshes[k]; })
+    .concat(Object.keys(treeNodes).map(function (k) { return treeNodes[k]; }));
+  var hits = ray.intersectObjects(targets);
   if (hits.length) select(hits[0].object.userData.id);
 }
 
@@ -472,8 +537,12 @@ function celebrate() {
   }
 }
 
+var lastTime = performance.now();
 function loop() {
   requestAnimationFrame(loop);
+  var now = performance.now();
+  stepTurn(Math.min(0.05, (now - lastTime) / 1000));
+  lastTime = now;
   for (var r = ripples.length - 1; r >= 0; r--) {
     var rp = ripples[r];
     rp.t += 0.02;
