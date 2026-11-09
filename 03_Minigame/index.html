@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3 · Practice — A11y Fix Path</title>
+<link rel="stylesheet" href="../shared/style.css">
+<style>
+  .layout { display: grid; grid-template-columns: 220px 1fr 380px; gap: 16px; align-items: start; }
+  @media (max-width: 1000px) { .layout { grid-template-columns: 1fr; } }
+  #parts { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  #parts button { width: 100%; text-align: left; }
+  #parts button[aria-pressed="true"] { background: var(--ink); color: #fff; }
+  #stage { height: 520px; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--bg); cursor: pointer; }
+  #stage canvas { display: block; }
+  .opts { display: grid; gap: 8px; }
+  .opts button { text-align: left; }
+  #score { font-weight: 700; margin: 0 0 10px; }
+  #inspect h2 { margin-top: 0; }
+  .opts button.tried { opacity: .5; text-decoration: line-through; cursor: not-allowed; }
+</style>
+</head>
+<body>
+<a class="skip" href="#parts">Skip to the game</a>
+<header class="topbar">
+  <a class="brand" href="../START_HERE.html">A11y Fix Path</a>
+  <nav aria-label="Path">
+    <ol class="steps">
+      <li><a href="../01_Fixer/index.html">1 · Find it</a></li>
+      <li><a href="../02_Explainer/index.html">2 · See why</a></li>
+      <li><a href="index.html" aria-current="page">3 · Practice</a></li>
+    </ol>
+  </nav>
+</header>
+<main id="main">
+  <h1>3 · Practice: Sounds Wrong</h1>
+  <p class="lede">The card looks finished. Three of its five parts are broken for screen reader users, and you can't tell which by looking. Inspect each part, hear what a screen reader says, and choose the fix. There is no timer. Each round breaks a different set.</p>
+  <p id="score" aria-live="polite"></p>
+  <div class="layout">
+    <section class="panel" aria-labelledby="partsh">
+      <h2 id="partsh" style="margin-top:0">Parts of the card</h2>
+      <ul id="parts"></ul>
+      <p style="font-size:14px;color:var(--muted)">Tab to a part and press Enter, or click it in the picture. Up and down arrows move through the list.</p>
+    </section>
+    <div id="stage"></div>
+    <section class="panel" id="inspect"></section>
+  </div>
+  <p id="status" class="sr-only" role="status"></p>
+  <div class="nextbar">
+    <a class="btn" href="../02_Explainer/index.html">← 2 · See why</a>
+    <a class="btn primary" href="../START_HERE.html">Back to start</a>
+  </div>
+</main>
+<script src="../shared/machine.js"></script>
+<script src="minigame.js"></script>
+</body>
+</html>
