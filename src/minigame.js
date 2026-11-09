@@ -2,6 +2,7 @@
 // No timer. Each round breaks a different 3 of the 5 parts, so it can be played again.
 import * as THREE from 'three';
 import { LEVELS } from './levels.js';
+import { speak, chime, thud, toggleVoice, onVoiceChange } from './sound.js';
 
 var level = 0;
 function parts() { return LEVELS[level].parts; }
@@ -99,6 +100,8 @@ function select(id) {
   highlight(id, isBroken);
   ripple(id, isBroken);
   status.textContent = p.label + '. A screen reader says ' + (isBroken ? p.badSays : p.okSays);
+  speak(p.label + '. ' + (isBroken ? p.badSays : p.okSays).replace(/"/g, ''));
+  if (isBroken) thud(); else chime();
 }
 
 function showPart(p, isBroken, note) {
@@ -135,6 +138,7 @@ function choose(p, o, k, btn) {
   if (o.ok) {
     round.fixed[p.id] = true;
     pulse(p.id);
+    chime();
     if (brokenLeft() === 0) { game.send('WIN'); win(); return; }
     game.send('FIX');
     showPart(p, false, o.why);
@@ -144,6 +148,7 @@ function choose(p, o, k, btn) {
     document.getElementById('partTitle').focus();
   } else {
     game.send('WRONG');
+    thud();
     round.tries++;
     if (!round.wrongTried[p.id]) round.wrongTried[p.id] = {};
     round.wrongTried[p.id][k] = true;
@@ -222,9 +227,18 @@ side.onChange(function (to) {
   if (to === 'front') status.textContent = 'Front of the card: what everyone sees.';
 });
 
+var muteBtn = document.getElementById('mute');
+muteBtn.addEventListener('click', toggleVoice);
+onVoiceChange(function (to) {
+  muteBtn.setAttribute('aria-pressed', String(to === 'muted'));
+  muteBtn.textContent = to === 'muted' ? 'Sound is off (M)' : 'Sound is on (M)';
+  status.textContent = to === 'muted' ? 'Sound off.' : 'Sound on.';
+});
 flipBtn.addEventListener('click', flip);
 document.addEventListener('keydown', function (e) {
-  if ((e.key === 'f' || e.key === 'F') && !e.ctrlKey && !e.metaKey && !e.altKey) flip();
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.key === 'f' || e.key === 'F') flip();
+  if (e.key === 'm' || e.key === 'M') toggleVoice();
 });
 
 // Called every frame from loop(). Smooth start and stop, and the card lifts a little mid-turn.

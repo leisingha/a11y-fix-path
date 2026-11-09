@@ -61,6 +61,15 @@ with sync_playwright() as p:
     check("flip: drag turns the card", side() == "back", side())
     check("flip: drag did not select a part", page.locator("#parts [aria-pressed=true]").count() == 0)
 
+    # Voice: selecting a part queues its words; M mutes the sound
+    page.click("#parts button >> nth=0")
+    spoken = page.evaluate("window.A11yFixPath.spoken")
+    check("voice: selecting a part speaks its words", len(spoken) == 1 and "Envelope image" in spoken[0], spoken)
+    page.keyboard.press("m")
+    check("voice: M mutes", page.get_attribute("body", "data-voice") == "muted" and page.get_attribute("#mute", "aria-pressed") == "true")
+    page.keyboard.press("m")
+    check("voice: M unmutes", page.get_attribute("body", "data-voice") == "on")
+
     check("no console errors", not errors, errors)
     browser.close()
 
