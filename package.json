@@ -1,0 +1,17 @@
+{
+  "name": "a11y-fix-path",
+  "version": "1.0.0",
+  "description": "Fix one button three ways: a fixer, a 3D explainer and a 2D minigame about screen reader accessibility. DG8117 Create.",
+  "private": true,
+  "scripts": {
+    "build": "npm run build:explainer && npm run build:minigame",
+    "build:explainer": "esbuild src/explainer.js --bundle --minify --format=iife --target=es2018 --outfile=02_Explainer/explainer.js",
+    "build:minigame": "esbuild src/minigame.js --bundle --minify --format=iife --target=es2018 --outfile=03_Minigame/minigame.js"
+  },
+  "dependencies": {
+    "three": "0.187.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
+}
