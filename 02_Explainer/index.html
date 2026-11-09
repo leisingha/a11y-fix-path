@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2 · See why — A11y Fix Path</title>
+<link rel="stylesheet" href="../shared/style.css">
+<style>
+  .layout { display: grid; grid-template-columns: 1fr 360px; gap: 16px; }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+  #stage { height: 540px; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); background: var(--bg); }
+  #stage canvas { display: block; }
+  .count { color: var(--muted); font-size: 14px; margin: 0; }
+  .ctrls { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+  .toggle { display: flex; gap: 0; margin-bottom: 12px; }
+  .toggle button { border-radius: 0; }
+  .toggle button:first-child { border-radius: 8px 0 0 8px; }
+  .toggle button:last-child { border-radius: 0 8px 8px 0; border-left: 0; }
+  .toggle button[aria-pressed="true"] { background: var(--ink); color: #fff; }
+  #stepTitle { margin-top: 4px; }
+  .hint { font-size: 14px; color: var(--muted); }
+</style>
+</head>
+<body>
+<a class="skip" href="#steps">Skip to the steps</a>
+<header class="topbar">
+  <a class="brand" href="../START_HERE.html">A11y Fix Path</a>
+  <nav aria-label="Path">
+    <ol class="steps">
+      <li><a href="../01_Fixer/index.html">1 · Find it</a></li>
+      <li><a href="index.html" aria-current="page">2 · See why</a></li>
+      <li><a href="../03_Minigame/index.html">3 · Practice</a></li>
+    </ol>
+  </nav>
+</header>
+<main id="main">
+  <h1>2 · See why: the explainer</h1>
+  <p class="lede">One fix, followed from the line of code to what a screen reader user hears. Use the buttons or the arrow keys. The 3D view is a picture of the same steps; every word is in the panel on the right, so nothing is lost without it.</p>
+
+  <div class="layout">
+    <div id="stage"></div>
+    <section class="panel" id="steps" aria-labelledby="stepTitle">
+      <div class="toggle" role="group" aria-label="Jump to">
+        <button id="modeBefore" aria-pressed="true">Before</button>
+        <button id="modeAfter" aria-pressed="false">After</button>
+      </div>
+      <p class="count" id="stepCount"></p>
+      <div aria-live="polite">
+        <h2 id="stepTitle"></h2>
+        <p id="stepBody"></p>
+      </div>
+      <div class="ctrls">
+        <button id="prev">← Back</button>
+        <button class="primary" id="next">Next step →</button>
+      </div>
+      <p class="hint"><label><input type="checkbox" id="motion"> Animate camera</label> (off by default if your system asks for reduced motion)</p>
+      <p id="nextPiece" hidden><a class="btn primary" href="../03_Minigame/index.html">Now practise it yourself →</a></p>
+    </section>
+  </div>
+
+  <div class="nextbar">
+    <a class="btn" href="../01_Fixer/index.html">← 1 · Find it</a>
+    <a class="btn primary" href="../03_Minigame/index.html">Next: 3 · Practice →</a>
+  </div>
+</main>
+<script src="../shared/machine.js"></script>
+<script src="explainer.js"></script>
+</body>
+</html>
