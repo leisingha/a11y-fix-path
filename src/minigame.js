@@ -1,64 +1,10 @@
 // Minigame: a card that looks fine but sounds broken. Inspect each part, hear what a screen reader says, pick the fix.
 // No timer. Each round breaks a different 3 of the 5 parts, so it can be played again.
 import * as THREE from 'three';
+import { LEVELS } from './levels.js';
 
-var PARTS = [
-  {
-    id: 'img', label: 'Envelope image', y: 110, h: 120, w: 120,
-    okSays: 'Nothing (skipped as decoration). The heading already says what the card is.',
-    badSays: '"envelope dot png, image"',
-    badCode: '<img src="envelope.png" />',
-    options: [
-      { code: 'alt="image"', ok: false, why: 'The user already knows it is an image. "image" adds a word and no meaning.' },
-      { code: 'alt=""', ok: true, why: 'Right. This picture is decoration and the heading says the same thing, so an empty alt tells the screen reader to skip it.' },
-      { code: 'title="envelope.png"', ok: false, why: 'title is not read reliably and the file name still means nothing to a listener.' }
-    ]
-  },
-  {
-    id: 'heading', label: 'Card title', y: 10, h: 44, w: 330,
-    okSays: '"Weekly accessibility tips, heading level 2"',
-    badSays: '"Weekly accessibility tips" (plain text, not in the headings list)',
-    badCode: '<div className="big">Weekly accessibility tips</div>',
-    options: [
-      { code: 'style={{ fontSize: 24 }}', ok: false, why: 'Bigger text is still plain text to a screen reader. Size is only visual.' },
-      { code: 'role="title"', ok: false, why: 'There is no "title" role. The browser ignores it.' },
-      { code: 'use <h2> instead of <div>', ok: true, why: 'Right. A real heading shows up in the headings list, which is how many screen reader users skim a page.' }
-    ]
-  },
-  {
-    id: 'input', label: 'Email field', y: -70, h: 50, w: 330,
-    okSays: '"Email address, edit text"',
-    badSays: '"edit text, blank"',
-    badCode: '<input type="email" placeholder="Email address" />',
-    options: [
-      { code: 'name="email"', ok: false, why: 'name is for form submission. It does not give the field an accessible name.' },
-      { code: 'aria-label="Email address"', ok: true, why: 'Right. The field now has a name that stays after the user starts typing, unlike the placeholder.' },
-      { code: 'a longer placeholder', ok: false, why: 'Placeholder text vanishes when typing starts and many screen readers do not use it as the name.' }
-    ]
-  },
-  {
-    id: 'button', label: 'Send button', y: -145, h: 54, w: 54, x: 138,
-    okSays: '"Subscribe, button"',
-    badSays: '"button"',
-    badCode: '<button onClick={subscribe}><SendIcon /></button>',
-    options: [
-      { code: 'aria-label="Subscribe"', ok: true, why: 'Right. Same icon on screen, and now the button says what it does.' },
-      { code: 'role="button"', ok: false, why: 'It is already a button. The problem is the missing name, and this does not add one.' },
-      { code: '<SendIcon aria-hidden="true" />', ok: false, why: 'Hiding the icon is good practice, but the button still has no name. It would still say just "button".' }
-    ]
-  },
-  {
-    id: 'link', label: 'Info link', y: -145, h: 44, w: 44, x: -140,
-    okSays: '"Privacy policy, link"',
-    badSays: '"link"',
-    badCode: '<a href="/privacy"><InfoIcon /></a>',
-    options: [
-      { code: 'aria-label="Click here"', ok: false, why: 'Users often list all links on a page. "Click here" says nothing about where it goes.' },
-      { code: 'href="#privacy"', ok: false, why: 'Changing the address does not change what the link is called.' },
-      { code: 'aria-label="Privacy policy"', ok: true, why: 'Right. The link now says where it goes.' }
-    ]
-  }
-];
+var level = 0;
+function parts() { return LEVELS[level].parts; }
 
 // ---------- state ----------
 // The round as a state machine:
@@ -90,7 +36,7 @@ var stage = document.getElementById('stage');
 var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 function pickBroken() {
-  var ids = PARTS.map(function (p) { return p.id; });
+  var ids = parts().map(function (p) { return p.id; });
   // Shuffle with plain swaps, then keep the first three.
   for (var i = ids.length - 1; i > 0; i--) {
     var j = Math.floor(Math.random() * (i + 1));
@@ -110,14 +56,15 @@ function brokenLeft() {
 }
 
 function partById(id) {
-  for (var i = 0; i < PARTS.length; i++) if (PARTS[i].id === id) return PARTS[i];
+  var list = parts();
+  for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i];
   return null;
 }
 
 // ---------- DOM ----------
 function renderList() {
   listBox.innerHTML = '';
-  PARTS.forEach(function (p, i) {
+  parts().forEach(function (p, i) {
     var li = document.createElement('li');
     var b = document.createElement('button');
     var mark = round.fixed[p.id] ? ' ✓ fixed' : (round.heard[p.id] && !round.broken[p.id] ? ' ✓ fine' : '');
@@ -128,7 +75,7 @@ function renderList() {
     b.onkeydown = function (e) {
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
         e.preventDefault();
-        var n = (i + (e.key === 'ArrowDown' ? 1 : PARTS.length - 1)) % PARTS.length;
+        var n = (i + (e.key === 'ArrowDown' ? 1 : parts().length - 1)) % parts().length;
         listBox.querySelectorAll('button')[n].focus();
       }
     };
@@ -308,8 +255,8 @@ function initScene() {
 
   BADGE_FIXED = badgeTex('fixed'); BADGE_FINE = badgeTex('fine');
 
-  PARTS.forEach(function (p) {
-    var m = plane(p.w, p.h, tex(DRAW[p.id], p.w, p.h));
+  parts().forEach(function (p) {
+    var m = plane(p.w, p.h, tex(DRAW[p.draw], p.w, p.h));
     m.position.set(p.x || 0, p.y, 0);
     m.userData.id = p.id;
     scene.add(m);
@@ -355,7 +302,7 @@ function onClick(e) {
 function highlight(id, isBroken) {
   if (!renderer) return;
   if (!id) { ring.visible = false; return; }
-  var p = PARTS.filter(function (x) { return x.id === id; })[0];
+  var p = parts().filter(function (x) { return x.id === id; })[0];
   var x = p.x || 0, y = p.y, w = p.w + 16, h = p.h + 16, t = 4;
   var bars = ring.children;
   bars[0].scale.set(w + t, t, 1); bars[0].position.set(x, y + h / 2, 2);
@@ -369,7 +316,7 @@ function highlight(id, isBroken) {
 
 function refreshBadges() {
   if (!renderer) return;
-  PARTS.forEach(function (p) {
+  parts().forEach(function (p) {
     var b = badges[p.id];
     if (round.fixed[p.id]) { b.material.map = BADGE_FIXED; b.visible = true; }
     else if (round.heard[p.id] && !round.broken[p.id]) { b.material.map = BADGE_FINE; b.visible = true; }
