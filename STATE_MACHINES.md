@@ -41,6 +41,8 @@ The tour is a plain list of 10 steps. The step number is the main state, shown a
 
 ## 3 · Minigame (`03_Minigame/minigame.js`)
 
+The game now has three cards. Five machines run it; **game** is the round on the current card.
+
 **game**
 
 | From | Event | To |
@@ -58,6 +60,44 @@ Each part also has a lifecycle for the round. A fine part goes **unheard → hea
 - Clicking a part after winning used to replace the "Play again" panel, so the only way to play again was to reload the page. In `won`, selection is now ignored.
 - A wrong answer could be counted again if you left a part and came back to it. Wrong answers are now remembered per part.
 - Choosing an answer used to delete the focused button, which dropped keyboard and screen reader users back to the top of the page. Focus now moves to the part's heading or to the Play again button. The fixer had the same problem, and focus there now moves to the results summary.
+
+**side**: which face of the card is up. A turn takes time, so FLIP is ignored while one is happening.
+
+| From | Event | To |
+|---|---|---|
+| front | FLIP | turning-to-back |
+| turning-to-back | DONE | back |
+| back | FLIP | turning-to-front |
+| turning-to-front | DONE | front |
+
+**voice**: speech and tones.
+
+| From | Event | To |
+|---|---|---|
+| on | MUTE | muted |
+| muted | UNMUTE | on |
+
+**level**: progress through the three cards.
+
+| From | Event | To | When |
+|---|---|---|---|
+| playing | CLEAR | cleared | Cards 1 and 2 are won |
+| cleared | NEXT | playing | Next card |
+| playing | FINISH | finished | Card 3 is won |
+| finished | RESTART | playing | Play again |
+
+**travel** (the level map tile)
+
+| From | Event | To |
+|---|---|---|
+| resting | GO | traveling |
+| traveling | ARRIVE | resting |
+
+Also on `<body>`: `data-card` (1 to 3) and `data-left` (broken parts left on this card). Tests read them instead of guessing with timers.
+
+**Bugs this prevents:**
+- Mashing F while the card is turning could restart the turn from the wrong angle, so FLIP is ignored mid-turn.
+- Pressing Next card twice during the tile's trip would load a card twice, so a second NEXT or RESTART is ignored while the tile is travelling.
 
 ## Why this helps
 

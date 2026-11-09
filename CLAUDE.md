@@ -14,6 +14,7 @@ A course artifact for DG8117 (Introduction to Game Design, TMU Master of Digital
 
 - Static pages. Open `START_HERE.html` directly from disk. No server needed.
 - `01_Fixer/fixer.js` is plain JavaScript. The explainer and minigame are written in `src/` and bundled with esbuild into `02_Explainer/explainer.js` and `03_Minigame/minigame.js`. Run `npm run build` after changing anything in `src/`, and commit the rebuilt bundles with the source change.
+- Minigame code map: `src/levels.js` holds the three cards as data (parts, what a screen reader says, fix options, hints). `src/sound.js` holds speech, tones and the `voice` machine. `src/minigame.js` holds the round, the card scene, the flip, the level map and the Complete screen. `shared/rules.js` is the fixer's rule list, also read by the game's Hint button. `tests/check.py` is the browser test; run it after every change.
 - Every page runs on small named state machines from `shared/machine.js`. Each one writes its state onto `<body>` as a `data-*` attribute. `STATE_MACHINES.md` lists every state and event. Keep that file in sync when a machine changes.
 
 ## Rules for changes

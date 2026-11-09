@@ -6,7 +6,7 @@ An icon-only button looks fine, but a screen reader user hears only "button". Th
 
 1. **Find it.** A fixer checks a React component, proposes `aria-label="Subscribe"`, and re-checks after you accept.
 2. **See why.** In a 3D scene, the button rides a track through four stops: the JSX code, the DOM as a tree of boxes, the accessibility tree as a tree of spheres, and a speaker that gives off sound rings. It goes once before the fix and once after.
-3. **Practice.** In "Sounds Wrong", a card looks finished but three of its five parts are broken for screen reader users. Inspect each part, hear what it says, and pick the fix. There is no timer, and each round breaks a different set.
+3. **Practice.** In "Sounds Wrong", a card looks finished but three of its five parts are broken for screen reader users. Inspect each part, hear what it says (the page speaks it aloud, and M mutes), and pick the fix. Turn the card over (button, F key, or drag) to see its accessibility tree, where a broken part is a hollow red sphere. Clear three cards (newsletter, sign-in form, nav bar) and the tile on the level map hops to the next. A Hint button runs the same rule as the fixer. There is no timer and no points, and each round breaks a different set.
 
 ## How to open it
 
@@ -21,10 +21,11 @@ If a page does not open on your machine, watch `04_Capture/A11yFixPath_capture.m
 | `START_HERE.html` | Start page that links the three pieces |
 | `01_Fixer/` | Fixer: five WCAG checks, accept or reject, re-check (plain HTML and JavaScript) |
 | `02_Explainer/` | 3D explainer (Three.js, built from `src/explainer.js`) |
-| `03_Minigame/` | "Sounds Wrong" 2D minigame (Three.js, built from `src/minigame.js`) |
+| `03_Minigame/` | "Sounds Wrong" card game with three levels (Three.js, built from `src/minigame.js`, `src/levels.js` and `src/sound.js`) |
 | `04_Capture/` | Capture video of the whole path |
-| `shared/` | Shared styles and the state machine helper |
-| `src/` | Readable source for the two Three.js pieces |
+| `shared/` | Shared styles, the state machine helper, and the accessibility rules both the fixer and the game use |
+| `src/` | Readable source for the two Three.js pieces. Card data lives in `src/levels.js` |
+| `tests/check.py` | Browser checks (Playwright): `python3 tests/check.py` |
 | `STATE_MACHINES.md` | Every state machine, its events, and the bugs they fixed |
 
 ## Build
@@ -43,9 +44,10 @@ I built everything as static web pages because the people I want to hire me are 
 ## Accessibility notes
 
 - The 3D canvas is hidden from assistive technology. The step text, the list of card parts and every control are real HTML.
-- Everything works by keyboard. The explainer uses the arrow keys, and in the game you Tab to a part and press Enter.
+- Everything works by keyboard. The explainer uses the arrow keys, and in the game you Tab to a part and press Enter. F turns the card over and M mutes the sound.
+- The back of the card has the same tree as an HTML list, so no word lives only in the canvas.
 - Camera movement is off when the system asks for reduced motion, and a checkbox can turn it off at any time.
-- The game has no timer and no fail state.
+- The game has no timer and no fail state. Speech uses the browser's own voice, with no download, and the same words are always on the page as text.
 
 ## What is not in this build yet
 
