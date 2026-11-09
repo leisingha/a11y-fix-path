@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>1 · Find it — A11y Fix Path</title>
+<link rel="stylesheet" href="../shared/style.css">
+<style>
+  textarea { width: 100%; min-height: 330px; border: 1px solid var(--line); border-radius: 8px; padding: 10px; line-height: 1.45; resize: vertical; }
+  .issue { border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin-bottom: 10px; background: #fff; }
+  .issue.fixed { background: var(--good-bg); border-color: #9cc9aa; }
+  .issue.rejected { background: #f2f2f2; }
+  .issue h3 { margin: 0 0 4px; font-size: 17px; }
+  .diff { background: #f7f7f7; border-radius: 6px; padding: 8px; margin: 8px 0; }
+  .diff .del { color: var(--bad); }
+  .diff .add { color: var(--good); }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .summary { font-weight: 700; margin-bottom: 10px; }
+  body[data-checker="stale"] #issues { opacity: .45; }
+  .row { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <a class="brand" href="../START_HERE.html">A11y Fix Path</a>
+  <nav aria-label="Path">
+    <ol class="steps">
+      <li><a href="index.html" aria-current="page">1 · Find it</a></li>
+      <li><a href="../02_Explainer/index.html">2 · See why</a></li>
+      <li><a href="../03_Minigame/index.html">3 · Practice</a></li>
+    </ol>
+  </nav>
+</header>
+<main id="main">
+  <h1>1 · Find it: the fixer</h1>
+  <p class="lede">This is a browser version of the core of my accessibility tool. It checks React JSX for five common WCAG failures. For each one it proposes a source-level fix that you can accept or reject, then checks again. Press <strong>Check code</strong>, accept the fix for the icon button, and watch the warning clear.</p>
+
+  <div class="grid2">
+    <section class="panel" aria-labelledby="codeh">
+      <h2 id="codeh">Code under test</h2>
+      <label for="code" class="sr-only">JSX source code</label>
+      <textarea id="code" spellcheck="false"></textarea>
+      <div class="row">
+        <button class="primary" id="run">Check code</button>
+        <button id="reset">Reset sample</button>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="resh">
+      <h2 id="resh">Results</h2>
+      <p class="summary" id="summary" role="status" aria-live="polite" tabindex="-1">Not checked yet.</p>
+      <div id="issues"></div>
+      <p style="font-size:14px;color:var(--muted)"><span class="tag t1">Tier 1</span> mechanical fix, safe to apply. <span class="tag t2">Tier 2</span> the fix needs a human to confirm the words. Tier 3 issues, like whether a page is confusing, are left to people, so this tool does not try them.</p>
+    </section>
+  </div>
+
+  <div class="nextbar">
+    <a class="btn" href="../START_HERE.html">← Start</a>
+    <a class="btn primary" href="../02_Explainer/index.html">Next: see why the button fix matters →</a>
+  </div>
+</main>
+<script src="../shared/machine.js"></script>
+<script src="fixer.js"></script>
+</body>
+</html>
